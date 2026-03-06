@@ -11,7 +11,7 @@ func buildMessage(info *Info, payload map[string]interface{}) string {
 
 	switch info.Event {
 	case Notification:
-		content := truncate(escapeHTML(jsonStr(payload, "message")), 500)
+		content := escapeHTML(jsonStr(payload, "message"))
 		b.WriteString("<b>🔔 Claude Code 通知</b>\n")
 		writeHeader(&b, info)
 		b.WriteString("<b>状态：</b>等待输入\n")
@@ -21,7 +21,7 @@ func buildMessage(info *Info, payload map[string]interface{}) string {
 		}
 
 	case Stop:
-		summary := truncate(escapeHTML(jsonStr(payload, "transcript_summary")), 800)
+		summary := escapeHTML(claudeSummary(payload))
 		b.WriteString("<b>✅ Claude Code 通知</b>\n")
 		writeHeader(&b, info)
 		b.WriteString("<b>状态：</b>任务完成")
@@ -31,7 +31,7 @@ func buildMessage(info *Info, payload map[string]interface{}) string {
 		}
 
 	case SubagentStop:
-		summary := truncate(escapeHTML(jsonStr(payload, "transcript_summary")), 500)
+		summary := escapeHTML(claudeSummary(payload))
 		b.WriteString("<b>⚙️ Claude Code 通知</b>\n")
 		writeHeader(&b, info)
 		b.WriteString("<b>状态：</b>子代理完成")
@@ -41,7 +41,7 @@ func buildMessage(info *Info, payload map[string]interface{}) string {
 		}
 
 	case AgentTurnComplete:
-		summary := truncate(escapeHTML(codexSummary(payload)), 800)
+		summary := escapeHTML(codexSummary(payload))
 		b.WriteString("<b>🤖 Codex 通知</b>\n")
 		writeHeader(&b, info)
 		b.WriteString("<b>状态：</b>任务完成")
@@ -58,8 +58,8 @@ func buildMessage(info *Info, payload map[string]interface{}) string {
 }
 
 func writeHeader(b *strings.Builder, info *Info) {
-	fmt.Fprintf(b, "<b>主机：</b><code>%s</code>\n", escapeHTML(info.Hostname))
-	fmt.Fprintf(b, "<b>项目：</b><code>%s</code>\n", escapeHTML(info.Project))
+	fmt.Fprintf(b, "<b>主机：</b><code>%s</code>\n", escapeHTML(truncate(info.Hostname, 120)))
+	fmt.Fprintf(b, "<b>项目：</b><code>%s</code>\n", escapeHTML(truncate(info.Project, 240)))
 	if info.SessionID != "" {
 		fmt.Fprintf(b, "<b>会话ID：</b><code>%s</code>\n",
 			escapeHTML(truncate(info.SessionID, 120)))
@@ -68,6 +68,14 @@ func writeHeader(b *strings.Builder, info *Info) {
 		fmt.Fprintf(b, "<b>回合ID：</b><code>%s</code>\n",
 			escapeHTML(truncate(info.TurnID, 120)))
 	}
+}
+
+func claudeSummary(payload map[string]interface{}) string {
+	return firstOf(payload,
+		"last_assistant_message",
+		"last-assistant-message",
+		"transcript_summary",
+	)
 }
 
 // codexSummary extracts a summary from Codex payload.

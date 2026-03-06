@@ -76,7 +76,7 @@ func TestCodexSummary(t *testing.T) {
 	// Priority 1: last-assistant-message
 	p1 := map[string]interface{}{
 		"last-assistant-message": "from assistant",
-		"message":               "from message",
+		"message":                "from message",
 	}
 	if got := codexSummary(p1); got != "from assistant" {
 		t.Errorf("codexSummary priority1 = %q", got)
@@ -112,6 +112,39 @@ func TestCodexSummary(t *testing.T) {
 	}
 	if got := codexSummary(nil); got != "" {
 		t.Errorf("codexSummary nil = %q", got)
+	}
+}
+
+func TestClaudeSummary(t *testing.T) {
+	// Priority 1: last_assistant_message
+	p1 := map[string]interface{}{
+		"last_assistant_message": "from assistant",
+		"transcript_summary":     "from summary",
+	}
+	if got := claudeSummary(p1); got != "from assistant" {
+		t.Errorf("claudeSummary priority1 = %q", got)
+	}
+
+	// Priority 2: hyphenated fallback
+	p2 := map[string]interface{}{
+		"last-assistant-message": "from hyphenated",
+		"transcript_summary":     "from summary",
+	}
+	if got := claudeSummary(p2); got != "from hyphenated" {
+		t.Errorf("claudeSummary priority2 = %q", got)
+	}
+
+	// Priority 3: transcript_summary
+	p3 := map[string]interface{}{"transcript_summary": "from summary"}
+	if got := claudeSummary(p3); got != "from summary" {
+		t.Errorf("claudeSummary priority3 = %q", got)
+	}
+
+	if got := claudeSummary(map[string]interface{}{}); got != "" {
+		t.Errorf("claudeSummary empty = %q, want empty", got)
+	}
+	if got := claudeSummary(nil); got != "" {
+		t.Errorf("claudeSummary nil = %q, want empty", got)
 	}
 }
 
@@ -285,9 +318,21 @@ func TestBuildMessage_Notification(t *testing.T) {
 	}
 }
 
+func TestBuildMessage_NotificationDoesNotTruncateBody(t *testing.T) {
+	info := &Info{Event: Notification, Source: SourceClaude, Hostname: "myhost", Project: "/proj"}
+	body := strings.Repeat("x", 700)
+	msg := buildMessage(info, map[string]interface{}{"message": body})
+	if !strings.Contains(msg, body) {
+		t.Error("Notification message should keep full body for Telegram chunking")
+	}
+}
+
 func TestBuildMessage_Stop(t *testing.T) {
 	info := &Info{Event: Stop, Source: SourceClaude, Hostname: "h", Project: "/p"}
-	payload := map[string]interface{}{"transcript_summary": "done stuff"}
+	payload := map[string]interface{}{
+		"last_assistant_message": "final answer",
+		"transcript_summary":     "done stuff",
+	}
 	msg := buildMessage(info, payload)
 	if !strings.Contains(msg, "✅") {
 		t.Error("Stop message missing checkmark")
@@ -295,16 +340,34 @@ func TestBuildMessage_Stop(t *testing.T) {
 	if !strings.Contains(msg, "任务完成") {
 		t.Error("Stop message missing status")
 	}
+	if !strings.Contains(msg, "final answer") {
+		t.Error("Stop message missing last assistant message")
+	}
+	if strings.Contains(msg, "done stuff") {
+		t.Error("Stop message should prefer last assistant message over transcript summary")
+	}
+}
+
+func TestBuildMessage_StopDoesNotTruncateSummary(t *testing.T) {
+	info := &Info{Event: Stop, Source: SourceClaude, Hostname: "h", Project: "/p"}
+	summary := strings.Repeat("完成 ", 250)
+	msg := buildMessage(info, map[string]interface{}{"last_assistant_message": summary})
+	if !strings.Contains(msg, summary) {
+		t.Error("Stop message should keep full summary for Telegram chunking")
+	}
 }
 
 func TestBuildMessage_SubagentStop(t *testing.T) {
 	info := &Info{Event: SubagentStop, Source: SourceClaude, Hostname: "h", Project: "/p"}
-	msg := buildMessage(info, map[string]interface{}{})
+	msg := buildMessage(info, map[string]interface{}{"last_assistant_message": "subagent done"})
 	if !strings.Contains(msg, "⚙️") {
 		t.Error("SubagentStop message missing gear emoji")
 	}
 	if !strings.Contains(msg, "子代理完成") {
 		t.Error("SubagentStop message missing status")
+	}
+	if !strings.Contains(msg, "subagent done") {
+		t.Error("SubagentStop message missing last assistant message")
 	}
 }
 
