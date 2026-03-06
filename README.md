@@ -34,7 +34,11 @@ Look for `"chat":{"id": YOUR_CHAT_ID}` in the response.
 ### 3. Install
 
 ```bash
-# Build from source
+# Option A: use a prebuilt binary for your platform (macOS/Linux)
+# chmod +x ./claude-notify-hook
+# ./claude-notify-hook install
+
+# Option B: build from source
 git clone https://github.com/user/claude-notify-hook.git
 cd claude-notify-hook
 make install
@@ -42,6 +46,8 @@ make install
 # Run interactive installer
 claude-notify-hook install
 ```
+
+If you start from a single prebuilt binary, the installer will copy it into a managed path and register Claude/Codex hooks against that absolute path. Users do not need Go after installation, and the binary does not need to stay in your download directory.
 
 Optional install modes:
 
@@ -54,6 +60,7 @@ The installer will:
 - Ask for your Bot Token and Chat ID
 - Offer to reuse saved credentials on reinstall
 - Save credentials to `~/.config/claude-notify-hook/.env`
+- Copy the running binary to `~/.config/claude-notify-hook/bin/claude-notify-hook`
 - Register hooks in `~/.claude/settings.json`
 - Register `notify` in `~/.codex/config.toml` when Codex is installed
 - Send a test notification to verify everything works
@@ -100,7 +107,9 @@ Claude is asking for permission to run "npm install"...
 
 ```
 ~/.config/claude-notify-hook/
-└── .env                  # Your Telegram credentials (Bot Token + Chat ID)
+├── .env                  # Your Telegram credentials (Bot Token + Chat ID)
+└── bin/
+    └── claude-notify-hook # Managed binary used by Claude/Codex hooks
 
 ~/.claude/settings.json   # Hook registrations (managed by install/uninstall)
 ~/.codex/config.toml      # Codex notify registration (managed when possible)
@@ -141,7 +150,7 @@ This removes hook registrations from `settings.json` and optionally deletes the 
 ```bash
 make build          # Build for current platform
 make install        # Build and copy to ~/go/bin/
-make all            # Cross-compile for all platforms
+make all            # Cross-compile release binaries for macOS/Linux/Windows
 ```
 
 ## Requirements
