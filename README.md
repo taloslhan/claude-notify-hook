@@ -75,9 +75,9 @@ The installer registers hooks for three Claude Code events:
 
 | Event | When It Fires | What You See |
 |-------|---------------|--------------|
-| **Notification** | Claude needs your input (permission, question) | "Needs Input" + message |
-| **Stop** | A task/session completes | "Task Complete" + summary |
-| **SubagentStop** | A subagent finishes | "Subagent Complete" + summary |
+| **Notification** | Claude needs your input (permission, question) | "🔔 Claude Code 通知" + "等待输入" + message |
+| **Stop** | A task/session completes | "✅ Claude Code 通知" + "任务完成" + summary |
+| **SubagentStop** | A subagent finishes | "⚙️ Claude Code 通知" + "子代理完成" + summary |
 
 For Codex, the installer configures the official `notify` command in `~/.codex/config.toml` so you receive a Telegram message when a Codex turn completes.
 
@@ -85,11 +85,28 @@ For Codex, the installer configures the official `notify` command in `~/.codex/c
 
 ### Message Format
 
+Messages are sent in HTML format with Chinese labels:
+
 ```
-Claude Code | project-name
-Status: Needs Input
+🔔 Claude Code 通知
+主机：your-hostname
+项目：project-name
+会话ID：session-id
+回合ID：turn-id
+状态：等待输入
 
 Claude is asking for permission to run "npm install"...
+```
+
+For Codex turn completion:
+
+```
+🤖 Codex 通知
+主机：your-hostname
+项目：project-name
+状态：任务完成
+
+Task summary here...
 ```
 
 ## Commands

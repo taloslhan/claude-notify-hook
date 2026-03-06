@@ -70,6 +70,7 @@ func writeHeader(b *strings.Builder, info *Info) {
 	}
 }
 
+// claudeSummary extracts a summary from Claude Code payload using a priority chain.
 func claudeSummary(payload map[string]interface{}) string {
 	return firstOf(payload,
 		"last_assistant_message",
