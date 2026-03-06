@@ -86,7 +86,13 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 	ui.Success("配置已保存到 " + config.EnvFile)
 
-	binaryPath := resolveManagedBinaryPath()
+	binaryPath, err := installManagedBinary()
+	if err != nil {
+		ui.Warn("托管二进制安装失败，将继续使用当前可执行文件: " + err.Error())
+		binaryPath = resolveManagedBinaryPath()
+	} else {
+		ui.Success("二进制已安装到 " + binaryPath)
+	}
 
 	// Install Claude Code hook
 	if installClaude {

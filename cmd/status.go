@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 
 	"github.com/spf13/cobra"
@@ -22,11 +23,25 @@ func NewStatusCmd() *cobra.Command {
 
 			// 1. Binary in PATH
 			total++
-			if _, err := exec.LookPath("claude-notify-hook"); err == nil {
+			binaryPath := resolveManagedBinaryPath()
+			if binaryPath != "" {
+				if _, err := os.Stat(binaryPath); err == nil {
+					ui.StatusLine("二进制文件:", "已就绪", ui.Green)
+					ui.StatusLine("  路径:", binaryPath, ui.Dim)
+					score++
+				} else if path, err := exec.LookPath(managedBinaryName); err == nil {
+					ui.StatusLine("二进制文件:", "已在 PATH 中", ui.Green)
+					ui.StatusLine("  路径:", path, ui.Dim)
+					score++
+				} else {
+					ui.StatusLine("二进制文件:", "未找到可执行文件", ui.Red)
+				}
+			} else if path, err := exec.LookPath(managedBinaryName); err == nil {
 				ui.StatusLine("二进制文件:", "已在 PATH 中", ui.Green)
+				ui.StatusLine("  路径:", path, ui.Dim)
 				score++
 			} else {
-				ui.StatusLine("二进制文件:", "未在 PATH 中", ui.Red)
+				ui.StatusLine("二进制文件:", "未找到可执行文件", ui.Red)
 			}
 
 			// 2. Config file
@@ -43,7 +58,6 @@ func NewStatusCmd() *cobra.Command {
 
 			// 3. Claude Code hook
 			total++
-			binaryPath := resolveManagedBinaryPath()
 			if hook.HasClaudeHook(config.SettingsJSON, binaryPath) {
 				ui.StatusLine("Claude Code Hook:", "已注册", ui.Green)
 				score++
