@@ -142,3 +142,144 @@ func TestWantsCodex(t *testing.T) {
 		t.Error("WantsCodex should be false")
 	}
 }
+
+func TestLoad_SoundEnabled(t *testing.T) {
+	_, cleanup := withTempEnv(t)
+	defer cleanup()
+
+	tests := []struct {
+		name    string
+		envVal  string
+		want    bool
+	}{
+		{"true string", "true", true},
+		{"1 string", "1", true},
+		{"false string", "false", false},
+		{"0 string", "0", false},
+		{"empty string", "", false},
+		{"random string", "yes", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			content := "TELEGRAM_BOT_TOKEN=tok\nTELEGRAM_CHAT_ID=id\n"
+			if tt.envVal != "" {
+				content += "NOTIFY_SOUND_ENABLED=" + tt.envVal + "\n"
+			}
+			if err := os.WriteFile(EnvFile, []byte(content), 0600); err != nil {
+				t.Fatal(err)
+			}
+			c, err := Load()
+			if err != nil {
+				t.Fatalf("Load error: %v", err)
+			}
+			if c.SoundEnabled != tt.want {
+				t.Errorf("SoundEnabled = %v, want %v", c.SoundEnabled, tt.want)
+			}
+		})
+	}
+}
+
+func TestLoad_SoundFile(t *testing.T) {
+	_, cleanup := withTempEnv(t)
+	defer cleanup()
+
+	content := "TELEGRAM_BOT_TOKEN=tok\nTELEGRAM_CHAT_ID=id\nNOTIFY_SOUND_FILE=/custom/sound.wav\n"
+	if err := os.WriteFile(EnvFile, []byte(content), 0600); err != nil {
+		t.Fatal(err)
+	}
+	c, err := Load()
+	if err != nil {
+		t.Fatalf("Load error: %v", err)
+	}
+	if c.SoundFile != "/custom/sound.wav" {
+		t.Errorf("SoundFile = %q, want /custom/sound.wav", c.SoundFile)
+	}
+}
+
+func TestSave_SoundFields(t *testing.T) {
+	_, cleanup := withTempEnv(t)
+	defer cleanup()
+
+	orig := &Config{
+		BotToken:     "tok",
+		ChatID:       "id",
+		SoundEnabled: true,
+		SoundFile:    "/my/sound.aiff",
+	}
+	if err := orig.Save(); err != nil {
+		t.Fatalf("Save error: %v", err)
+	}
+
+	loaded, err := Load()
+	if err != nil {
+		t.Fatalf("Load error: %v", err)
+	}
+	if !loaded.SoundEnabled {
+		t.Error("SoundEnabled should be true after roundtrip")
+	}
+	if loaded.SoundFile != "/my/sound.aiff" {
+		t.Errorf("SoundFile = %q, want /my/sound.aiff", loaded.SoundFile)
+	}
+}
+
+func TestSave_SoundDisabled(t *testing.T) {
+	_, cleanup := withTempEnv(t)
+	defer cleanup()
+
+	orig := &Config{
+		BotToken:     "tok",
+		ChatID:       "id",
+		SoundEnabled: false,
+		SoundFile:    "",
+	}
+	if err := orig.Save(); err != nil {
+		t.Fatalf("Save error: %v", err)
+	}
+
+	loaded, err := Load()
+	if err != nil {
+		t.Fatalf("Load error: %v", err)
+	}
+	if loaded.SoundEnabled {
+		t.Error("SoundEnabled should be false after roundtrip")
+	}
+	if loaded.SoundFile != "" {
+		t.Errorf("SoundFile = %q, want empty", loaded.SoundFile)
+	}
+}
+
+func TestLoadAndSave_AllFieldsRoundtrip(t *testing.T) {
+	_, cleanup := withTempEnv(t)
+	defer cleanup()
+
+	orig := &Config{
+		BotToken:       "123:ABC",
+		ChatID:         "-100999",
+		InstallTargets: "claude,codex",
+		SoundEnabled:   true,
+		SoundFile:      "/path/to/sound.wav",
+	}
+	if err := orig.Save(); err != nil {
+		t.Fatalf("Save error: %v", err)
+	}
+
+	loaded, err := Load()
+	if err != nil {
+		t.Fatalf("Load error: %v", err)
+	}
+	if loaded.BotToken != orig.BotToken {
+		t.Errorf("BotToken = %q, want %q", loaded.BotToken, orig.BotToken)
+	}
+	if loaded.ChatID != orig.ChatID {
+		t.Errorf("ChatID = %q, want %q", loaded.ChatID, orig.ChatID)
+	}
+	if loaded.InstallTargets != orig.InstallTargets {
+		t.Errorf("InstallTargets = %q, want %q", loaded.InstallTargets, orig.InstallTargets)
+	}
+	if loaded.SoundEnabled != orig.SoundEnabled {
+		t.Errorf("SoundEnabled = %v, want %v", loaded.SoundEnabled, orig.SoundEnabled)
+	}
+	if loaded.SoundFile != orig.SoundFile {
+		t.Errorf("SoundFile = %q, want %q", loaded.SoundFile, orig.SoundFile)
+	}
+}

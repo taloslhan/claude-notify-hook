@@ -27,6 +27,8 @@ type Config struct {
 	BotToken       string
 	ChatID         string
 	InstallTargets string // "claude", "codex", "claude,codex"
+	SoundEnabled   bool   // play audio alert on notification
+	SoundFile      string // custom sound file path (empty = platform default)
 }
 
 func homeDir() string {
@@ -60,6 +62,10 @@ func Load() (*Config, error) {
 			c.ChatID = v
 		case "NOTIFY_INSTALL_TARGETS":
 			c.InstallTargets = v
+		case "NOTIFY_SOUND_ENABLED":
+			c.SoundEnabled = v == "true" || v == "1"
+		case "NOTIFY_SOUND_FILE":
+			c.SoundFile = v
 		}
 	}
 	return c, scanner.Err()
@@ -70,9 +76,13 @@ func (c *Config) Save() error {
 	if err := os.MkdirAll(ConfigDir, 0755); err != nil {
 		return err
 	}
+	soundEnabled := "false"
+	if c.SoundEnabled {
+		soundEnabled = "true"
+	}
 	content := fmt.Sprintf(
-		"TELEGRAM_BOT_TOKEN=%q\nTELEGRAM_CHAT_ID=%q\nNOTIFY_INSTALL_TARGETS=%q\n",
-		c.BotToken, c.ChatID, c.InstallTargets,
+		"TELEGRAM_BOT_TOKEN=%q\nTELEGRAM_CHAT_ID=%q\nNOTIFY_INSTALL_TARGETS=%q\nNOTIFY_SOUND_ENABLED=%s\nNOTIFY_SOUND_FILE=%q\n",
+		c.BotToken, c.ChatID, c.InstallTargets, soundEnabled, c.SoundFile,
 	)
 	return os.WriteFile(EnvFile, []byte(content), 0600)
 }

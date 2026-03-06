@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/user/claude-notify-hook/internal/config"
 	"github.com/user/claude-notify-hook/internal/event"
+	"github.com/user/claude-notify-hook/internal/sound"
 	"github.com/user/claude-notify-hook/internal/telegram"
 )
 
@@ -64,6 +65,11 @@ func runNotify(args []string) {
 
 	if info.Message == "" {
 		return
+	}
+
+	// Play sound alert (async, non-blocking)
+	if cfg.SoundEnabled {
+		sound.Play(cfg.SoundFile)
 	}
 
 	client := &telegram.Client{Token: cfg.BotToken, ChatID: cfg.ChatID}

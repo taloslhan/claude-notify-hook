@@ -79,6 +79,13 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 	cfg.InstallTargets = targets
 
+	// Sound notification
+	cfg.SoundEnabled = ui.Confirm("启用音效提醒?", true)
+	if cfg.SoundEnabled {
+		custom := ui.Prompt("自定义音效文件路径 (留空使用系统默认)", "")
+		cfg.SoundFile = custom
+	}
+
 	// Save config
 	if err := cfg.Save(); err != nil {
 		ui.Error("保存配置失败: " + err.Error())
